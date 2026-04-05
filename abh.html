@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Arcade | Pro Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --panel-bg: #1f2833;
+            --neon-blue: #66fcf1;
+            --neon-pink: #ff007f;
+            --neon-gold: #f2a900;
+            --text-light: #c5c6c7;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+        
+        body { 
+            background-color: var(--bg-color); color: var(--text-light); 
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
+            min-height: 100vh; overflow-y: auto; padding: 20px 0 80px 0;
+            touch-action: manipulation;
+        }
+
+        /* --- TYPOGRAPHY --- */
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; font-weight: 900; color: white; text-align: center; margin-bottom: 5px; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        h1 span.blue { color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue); }
+        h1 span.pink { color: var(--neon-pink); text-shadow: 0 0 20px var(--neon-pink); }
+        .subtitle { font-family: 'Orbitron', sans-serif; color: var(--neon-gold); font-size: 1rem; margin-bottom: 20px; text-align: center; font-weight: 700; letter-spacing: 2px;}
+
+        /* --- CONTAINERS --- */
+        .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 400px; animation: fadeIn 0.3s ease; padding: 0 15px;}
+        .screen.active { display: flex; }
+        .panel { background: var(--panel-bg); padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; width: 100%; max-width: 400px; margin-bottom: 20px;}
+
+        /* --- INPUTS & BUTTONS --- */
+        .box { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .room-code { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--neon-blue); font-weight: 900; letter-spacing: 5px; text-shadow: 0 0 15px var(--neon-blue); margin: 10px 0; }
+        
+        input { width: 100%; padding: 15px; border-radius: 10px; border: 2px solid #45a29e; background: #0b0c10; color: white; font-size: 16px !important; text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 700; outline: none; transition: 0.3s; margin-bottom: 10px;}
+        input:focus { border-color: var(--neon-pink); box-shadow: 0 0 15px var(--neon-pink); }
+        input::placeholder { color: rgba(255,255,255,0.3); font-size: 1rem; font-family: 'Poppins', sans-serif;}
+        
+        button { width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; font-family: 'Orbitron', sans-serif; margin-bottom: 15px; touch-action: manipulation;}
+        .btn-blue { background: transparent; color: var(--neon-blue); border: 2px solid var(--neon-blue); box-shadow: 0 0 10px rgba(102, 252, 241, 0.2); }
+        .btn-blue:active { background: var(--neon-blue); color: #000; box-shadow: 0 0 30px var(--neon-blue); }
+        .btn-pink { background: var(--neon-pink); color: white; box-shadow: 0 0 15px rgba(255, 0, 127, 0.4); }
+        .btn-pink:active { transform: scale(0.95); box-shadow: 0 0 30px var(--neon-pink); }
+        .btn-gold { background: var(--neon-gold); color: #000; box-shadow: 0 0 15px rgba(242, 169, 0, 0.4); }
+        .btn-gold:active { transform: scale(0.95); box-shadow: 0 0 30px var(--neon-gold); }
+        .btn-gray { background: transparent; color: var(--text-light); border: 2px solid var(--text-light); margin-top: 10px;}
+
+        /* --- GAME UI ELEMENTS --- */
+        .status-board { width: 100%; background: var(--panel-bg); padding: 15px; border-radius: 15px; text-align: center; margin-bottom: 20px; font-size: 1rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.05); }
+        .status-board span { font-family: 'Orbitron', sans-serif; font-weight: 900; }
+        .my-turn { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+        .their-turn { color: var(--neon-pink); text-shadow: 0 0 10px var(--neon-pink); }
+        .rules { font-size: 0.8rem; color: var(--neon-gold); margin-bottom: 15px; background: rgba(242, 169, 0, 0.1); padding: 10px; border-radius: 10px; border: 1px solid var(--neon-gold); text-align: center; width: 100%;}
+
+        /* BOARDS */
+        .ttt-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1/1; background: #45a29e; padding: 10px; border-radius: 15px; box-shadow: 0 0 30px rgba(69, 162, 158, 0.2); }
+        .ttt-cell { background: var(--bg-color); border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-family: 'Orbitron', sans-serif; font-weight: 900; cursor: pointer; transition: 0.2s; touch-action: manipulation;}
+        .ttt-cell.x { color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue); animation: pop 0.3s ease; }
+        .ttt-cell.o { color: var(--neon-pink); text-shadow: 0 0 20px var(--neon-pink); animation: pop 0.3s ease; }
+
+        .c4-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; width: 100%; background: var(--panel-bg); padding: 10px; border-radius: 15px; border: 2px solid var(--neon-blue); box-shadow: 0 0 20px rgba(102, 252, 241, 0.3); }
+        .c4-col { display: grid; grid-template-rows: repeat(6, 1fr); gap: 5px; cursor: pointer; touch-action: manipulation; }
+        .c4-cell { background: var(--bg-color); border-radius: 50%; aspect-ratio: 1/1; width: 100%; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); transition: 0.2s;}
+        .c4-cell.x { background: var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue); }
+        .c4-cell.o { background: var(--neon-pink); box-shadow: 0 0 15px var(--neon-pink); }
+
+        .rush-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; aspect-ratio: 1/1; background: var(--panel-bg); padding: 15px; border-radius: 15px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .rush-cell { background: rgba(0,0,0,0.5); border-radius: 10px; transition: 0.05s; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); touch-action: manipulation;}
+        .rush-cell:active { transform: scale(0.95); }
+        .rush-cell.active { background: var(--neon-gold); box-shadow: 0 0 30px var(--neon-gold); border: none; }
+        .score-box { display: flex; justify-content: space-between; font-size: 1.2rem; font-family: 'Orbitron', sans-serif; font-weight: 900; }
+
+        /* --- LIVE CHAT SYSTEM --- */
+        #chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: none;}
+        #chat-btn { background: var(--neon-blue); color: #000; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; box-shadow: 0 0 20px var(--neon-blue); cursor: pointer; position: relative;}
+        #chat-badge { position: absolute; top: -5px; right: -5px; background: var(--neon-pink); color: white; font-size: 0.8rem; font-weight: bold; width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; display: none; font-family: sans-serif;}
+        
+        #chat-panel { position: fixed; bottom: 90px; right: 20px; width: 300px; height: 400px; max-width: calc(100vw - 40px); background: rgba(11, 12, 16, 0.98); border: 2px solid var(--neon-blue); border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8); transform: scale(0); transform-origin: bottom right; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #chat-panel.open { transform: scale(1); }
+        
+        #chat-header { background: var(--panel-bg); padding: 10px; text-align: center; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--neon-blue); }
+        #chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; user-select: text;}
+        .msg { padding: 8px 12px; border-radius: 15px; max-width: 80%; word-wrap: break-word; }
+        .msg.me { background: var(--neon-blue); color: #000; align-self: flex-end; border-bottom-right-radius: 2px;}
+        .msg.them { background: var(--panel-bg); color: white; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid rgba(255,255,255,0.1);}
+        .msg span { font-size: 0.7rem; opacity: 0.7; display: block; margin-bottom: 2px; font-weight: bold; }
+        
+        #chat-input-area { display: flex; border-top: 1px solid rgba(255,255,255,0.1); }
+        #chat-input { border: none; border-radius: 0; margin: 0; font-size: 16px !important; font-family: 'Poppins', sans-serif; text-align: left;}
+        #chat-send { width: 60px; border-radius: 0; margin: 0; background: var(--neon-pink); color: white; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pop { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .loader { display: none; margin-top: 15px; color: var(--neon-blue); font-size: 0.9rem; font-weight: 600; }
+        .loader i { animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .particle { position: fixed; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; z-index: 8000; opacity: 0; }
+        @keyframes explode { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <h1><span class="blue">NEON</span> <span class="pink">ARCADE</span></h1>
+    <div class="subtitle" id="top-subtitle">PLAYER SETUP</div>
+
+    <!-- 0. LOBBY SCREEN -->
+    <div class="screen panel active" id="lobby-screen">
+        <input type="text" id="player-name" placeholder="Enter Your Name" maxlength="12">
+        
+        <div class="box" style="margin-top: 20px;">
+            <p style="font-size: 0.9rem; margin-bottom: 5px;">Host a Game</p>
+            <div class="room-code" id="my-code">-----</div>
+            <button class="btn-blue" onclick="copyCode()" id="copy-btn"><i class="fa-regular fa-copy"></i> Copy Code</button>
+            <div class="loader" id="host-loader"><i class="fa-solid fa-circle-notch"></i> Waiting for friend...</div>
+        </div>
+        
+        <p style="margin: 10px 0; font-weight: 800; opacity: 0.5;">OR</p>
+        
+        <div class="box">
+            <p style="font-size: 0.9rem; margin-bottom: 10px;">Join a Friend</p>
+            <input type="number" id="friend-code" placeholder="Enter 5-Digit Code" maxlength="5">
+            <button class="btn-pink" onclick="joinGame()"><i class="fa-solid fa-gamepad"></i> Join Game</button>
+            <div class="loader" id="join-loader" style="color: var(--neon-pink);"><i class="fa-solid fa-circle-notch"></i> Connecting...</div>
+        </div>
+    </div>
+
+    <!-- 1. GAME HUB SCREEN -->
+    <div class="screen panel" id="hub-screen">
+        <h2>Choose a Game</h2>
+        <p style="margin-bottom: 20px; font-size: 0.85rem; opacity: 0.7;">Clicking a game opens it for both players!</p>
+        <button class="btn-blue" onclick="requestLaunch('ttt')"><i class="fa-solid fa-xmarks-lines"></i> Classic Tic-Tac-Toe</button>
+        <button class="btn-pink" onclick="requestLaunch('c4')"><i class="fa-solid fa-grip"></i> Neon Connect 4</button>
+        <button class="btn-gold" onclick="requestLaunch('rush')"><i class="fa-solid fa-bolt"></i> Neon Grid Rush</button>
+    </div>
+
+    <!-- 2. TIC TAC TOE -->
+    <div class="screen" id="ttt-screen">
+        <div class="rules">Classic Rules: Get 3 in a row to win!</div>
+        <div class="status-board" id="ttt-status">Loading...</div>
+        <div class="ttt-board" id="ttt-board"></div>
+        <button class="btn-blue rematch-btn" onclick="requestRematch('ttt')" style="display: none; margin-top: 20px;">Play Again</button>
+        <button class="btn-gray" onclick="requestHub()"><i class="fa-solid fa-house"></i> Back to Arcade</button>
+    </div>
+
+    <!-- 3. CONNECT 4 -->
+    <div class="screen" id="c4-screen">
+        <div class="rules">Connect 4 of your colors in a row to win!</div>
+        <div class="status-board" id="c4-status">Loading...</div>
+        <div class="c4-board" id="c4-board"></div>
+        <button class="btn-pink rematch-btn" onclick="requestRematch('c4')" style="display: none; margin-top: 20px;">Play Again</button>
+        <button class="btn-gray" onclick="requestHub()"><i class="fa-solid fa-house"></i> Back to Arcade</button>
+    </div>
+
+    <!-- 4. GRID RUSH -->
+    <div class="screen" id="rush-screen">
+        <div class="rules">Smash the glowing yellow tile! First to 10 wins.</div>
+        <div class="status-board">
+            <div class="score-box">
+                <span class="my-turn" id="rush-host-score">Name: 0</span>
+                <span id="rush-status-text" style="font-size: 1rem; opacity: 0.8; font-weight: 400; align-self: center;">Ready?</span>
+                <span class="their-turn" id="rush-guest-score">Name: 0</span>
+            </div>
+        </div>
+        <div class="rush-board" id="rush-board"></div>
+        <button class="btn-gold rematch-btn" onclick="requestRematch('rush')" style="display: none; margin-top: 20px;">Rematch</button>
+        <button class="btn-gray" onclick="requestHub()"><i class="fa-solid fa-house"></i> Back to Arcade</button>
+    </div>
+
+    <!-- LIVE CHAT WIDGET -->
+    <div id="chat-widget">
+        <div id="chat-btn" onclick="toggleChat()"><i class="fa-regular fa-comment-dots"></i><div id="chat-badge">0</div></div>
+        <div id="chat-panel">
+            <div id="chat-header">Trash Talk</div>
+            <div id="chat-messages"></div>
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Say something..." onkeypress="handleChat(event)">
+                <button id="chat-send" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* =========================================
+           AUDIO ENGINE
+           ========================================= */
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let actx;
+
+        function initAudio() { 
+            if(!actx) actx = new AudioContext(); 
+            if(actx.state === 'suspended') actx.resume(); 
+        }
+
+        document.body.addEventListener('click', initAudio, { once: true });
+        document.body.addEventListener('touchstart', initAudio, { once: true });
+        
+        function playTone(freq, type, duration, vol=0.1) {
+            try {
+                if(!actx || actx.state !== 'running') return;
+                const osc = actx.createOscillator();
+                const gain = actx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, actx.currentTime);
+                gain.gain.setValueAtTime(vol, actx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + duration);
+                osc.connect(gain); gain.connect(actx.destination);
+                osc.start(); osc.stop(actx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        const sfx = {
+            pop: () => playTone(600, 'sine', 0.1, 0.2),
+            zap: () => playTone(880, 'square', 0.05, 0.1),
+            chat: () => { playTone(800, 'sine', 0.1, 0.1); setTimeout(()=>playTone(1200, 'sine', 0.15, 0.1), 100); },
+            win: () => { [440, 554, 659, 880].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.15, 0.1), i*100)); },
+            lose: () => { [440, 415, 392, 349].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.3, 0.1), i*200)); },
+            launch: () => playTone(300, 'triangle', 0.4, 0.2)
+        };
+
+        /* =========================================
+           MULTIPLAYER NETWORKING (FIXED CONNECTIVITY)
+           ========================================= */
+        const myRoomCode = Math.floor(10000 + Math.random() * 90000).toString();
+        document.getElementById('my-code').innerText = myRoomCode;
+
+        const peerPrefix = "neon-arcade-v6-";
+        
+        // Added Google STUN servers to bypass strict network firewalls
+        const peer = new Peer(peerPrefix + myRoomCode, {
+            config: { 'iceServers': [
+                { url: 'stun:stun.l.google.com:19302' },
+                { url: 'stun:stun1.l.google.com:19302' }
+            ]}
+        });
+        
+        let connection;
+        let mySymbol = ''; 
+        let myTurn = false;
+        let gameActive = false;
+        
+        let myName = "Player 1";
+        let theirName = "Player 2";
+
+        // HOST RECEIVING CONNECTION
+        peer.on('connection', (conn) => {
+            connection = conn;
+            setupConnection();
+            mySymbol = 'X';
+            
+            // Give the guest 0.5s to get ready before sending names & changing screen
+            setTimeout(() => {
+                sendNameInfo(); 
+                showScreen('hub-screen');
+                document.getElementById('chat-widget').style.display = 'block';
+            }, 500);
+        });
+
+        function getMyName() {
+            let input = document.getElementById('player-name').value.trim();
+            if(input !== "") myName = input;
+            else myName = (mySymbol === 'X') ? "Host" : "Guest";
+        }
+
+        function copyCode() {
+            initAudio(); 
+            getMyName();
+            navigator.clipboard.writeText(myRoomCode);
+            const btn = document.getElementById('copy-btn');
+            btn.innerHTML = "<i class='fa-solid fa-check'></i> Copied!";
+            setTimeout(() => { btn.innerHTML = "<i class='fa-regular fa-copy'></i> Copy Code"; }, 2000);
+            document.getElementById('host-loader').style.display = 'block';
+        }
+
+        // GUEST CONNECTING TO HOST
+        function joinGame() {
+            initAudio(); 
+            getMyName();
+            const friendCode = document.getElementById('friend-code').value;
+            if(friendCode.length !== 5) return alert("Enter a 5-digit code.");
+            
+            document.getElementById('join-loader').style.display = 'block';
+            
+            // Connection Timeout feature
+            let timeout = setTimeout(() => {
+                if(document.getElementById('lobby-screen').classList.contains('active')) {
+                    alert("Connection timed out. Ensure the code is correct and the Host is waiting.");
+                    document.getElementById('join-loader').style.display = 'none';
+                }
+            }, 8000);
+
+            connection = peer.connect(peerPrefix + friendCode);
+            
+            connection.on('open', () => {
+                clearTimeout(timeout); // Connected successfully!
+                setupConnection();
+                mySymbol = 'O';
+                sendNameInfo(); 
+                showScreen('hub-screen');
+                document.getElementById('chat-widget').style.display = 'block';
+            });
+
+            connection.on('error', () => {
+                clearTimeout(timeout);
+                alert("Room not found or connection failed.");
+                document.getElementById('join-loader').style.display = 'none';
+            });
+        }
+
+        function setupConnection() {
+            connection.on('data', (data) => {
+                if(data.type === 'info') { theirName = data.name; updateRushScoresUI(); updateStatus(activeGameId); }
+                if(data.type === 'chat') receiveChat(data.text);
+                if(data.type === 'launch') launchGame(data.game);
+                if(data.type === 'hub') showScreen('hub-screen');
+                if(data.type === 'rematch') {
+                    if(data.game === 'ttt') resetTTT(false);
+                    if(data.game === 'c4') resetC4(false);
+                    if(data.game === 'rush') resetRush();
+                }
+                if(data.type === 'move') {
+                    sfx.pop();
+                    if(data.game === 'ttt') receiveMoveTTT(data.index, data.symbol);
+                    if(data.game === 'c4') receiveMoveC4(data.col, data.symbol);
+                }
+                if(data.type === 'rush_tap') receiveRushTap(data.index); 
+                if(data.type === 'rush_sync') receiveRushSync(data.scoreX, data.scoreO); 
+                if(data.type === 'rush_spawn') receiveRushSpawn(data.index); 
+            });
+            
+            connection.on('close', () => { alert("Friend disconnected!"); location.reload(); });
+        }
+
+        function sendNameInfo() { connection.send({ type: 'info', name: myName }); }
+
+        /* =========================================
+           LIVE CHAT SYSTEM
+           ========================================= */
+        let chatOpen = false;
+        let unreadChats = 0;
+
+        function toggleChat() {
+            chatOpen = !chatOpen;
+            document.getElementById('chat-panel').classList.toggle('open');
+            if(chatOpen) {
+                unreadChats = 0;
+                document.getElementById('chat-badge').style.display = 'none';
+                document.getElementById('chat-input').focus();
+            }
+        }
+
+        function handleChat(e) { if(e.key === 'Enter') sendChat(); }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(text === '') return;
+            
+            appendChat('me', myName, text);
+            connection.send({ type: 'chat', text: text });
+            input.value = '';
+        }
+
+        function receiveChat(text) {
+            appendChat('them', theirName, text);
+            sfx.chat();
+            if(!chatOpen) {
+                unreadChats++;
+                const badge = document.getElementById('chat-badge');
+                badge.innerText = unreadChats;
+                badge.style.display = 'flex';
+                document.getElementById('chat-btn').style.transform = 'scale(1.2)';
+                setTimeout(() => document.getElementById('chat-btn').style.transform = 'scale(1)', 200);
+            }
+        }
+
+        function appendChat(type, sender, text) {
+            const box = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            msg.className = `msg ${type}`;
+            msg.innerHTML = `<span>${sender}</span>${text}`;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        /* =========================================
+           UI & NAVIGATION
+           ========================================= */
+        let activeGameId = '';
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            
+            if(screenId === 'hub-screen') { document.getElementById('top-subtitle').innerText = "MULTIPLAYER HUB"; activeGameId = ''; }
+            if(screenId === 'ttt-screen') { document.getElementById('top-subtitle').innerText = "CLASSIC TIC-TAC-TOE"; activeGameId = 'ttt';}
+            if(screenId === 'c4-screen') { document.getElementById('top-subtitle').innerText = "NEON CONNECT 4"; activeGameId = 'c4';}
+            if(screenId === 'rush-screen') { document.getElementById('top-subtitle').innerText = "NEON GRID RUSH"; activeGameId = 'rush';}
+        }
+
+        function requestLaunch(game) { connection.send({ type: 'launch', game: game }); launchGame(game); }
+        function requestHub() { connection.send({ type: 'hub' }); showScreen('hub-screen'); clearTimeout(rushTimer); }
+        function requestRematch(game) {
+            connection.send({ type: 'rematch', game: game });
+            if(game === 'ttt') resetTTT(true);
+            if(game === 'c4') resetC4(true);
+            if(game === 'rush') resetRush();
+        }
+
+        function launchGame(game) {
+            sfx.launch();
+            gameActive = true;
+            myTurn = (mySymbol === 'X'); 
+            
+            if(game === 'ttt') { showScreen('ttt-screen'); resetTTT(myTurn); } 
+            else if(game === 'c4') { showScreen('c4-screen'); resetC4(myTurn); }
+            else if(game === 'rush') { showScreen('rush-screen'); resetRush(); }
+        }
+
+        /* =========================================
+           GAME 1: CLASSIC TIC-TAC-TOE
+           ========================================= */
+        let tttBoard = ['', '', '', '', '', '', '', '', ''];
+
+        function resetTTT(amIFirst) {
+            tttBoard = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true; myTurn = amIFirst;
+            document.querySelector('#ttt-screen .rematch-btn').style.display = 'none';
+            const board = document.getElementById('ttt-board');
+            board.innerHTML = '';
+            for(let i=0; i<9; i++) {
+                const cell = document.createElement('div'); cell.className = 'ttt-cell';
+                cell.onclick = () => makeMoveTTT(i); board.appendChild(cell);
+            }
+            renderTTT(); updateStatus('ttt');
+        }
+
+        function makeMoveTTT(index) {
+            if(!myTurn || !gameActive || tttBoard[index] !== '') return;
+            sfx.pop();
+            tttBoard[index] = mySymbol;
+
+            renderTTT(); connection.send({ type: 'move', game: 'ttt', index: index, symbol: mySymbol });
+            checkWinTTT();
+            if(gameActive) { myTurn = false; updateStatus('ttt'); }
+        }
+
+        function receiveMoveTTT(index, symbol) {
+            tttBoard[index] = symbol;
+            renderTTT(); checkWinTTT();
+            if(gameActive) { myTurn = true; updateStatus('ttt'); }
+        }
+
+        function renderTTT() {
+            const cells = document.querySelectorAll('.ttt-cell');
+            cells.forEach((cell, i) => {
+                cell.innerText = tttBoard[i];
+                cell.className = 'ttt-cell'; 
+                if(tttBoard[i] === 'X') cell.classList.add('x');
+                if(tttBoard[i] === 'O') cell.classList.add('o');
+            });
+        }
+
+        function checkWinTTT() {
+            const winCond = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for(let cond of winCond) {
+                const [a, b, c] = cond;
+                if(tttBoard[a] && tttBoard[a] === tttBoard[b] && tttBoard[a] === tttBoard[c]) {
+                    gameActive = false; 
+                    declareWinner('ttt', tttBoard[a]); return;
+                }
+            }
+            if(!tttBoard.includes('')) {
+                gameActive = false;
+                document.getElementById('ttt-status').innerHTML = `DRAW! 🤝`; 
+                document.querySelector('#ttt-screen .rematch-btn').style.display = 'block';
+            }
+        }
+
+        /* =========================================
+           GAME 2: CONNECT 4
+           ========================================= */
+        const C4_ROWS = 6, C4_COLS = 7;
+        let c4Board = [];
+
+        function resetC4(amIFirst) {
+            c4Board = Array(C4_ROWS).fill().map(() => Array(C4_COLS).fill(''));
+            gameActive = true; myTurn = amIFirst;
+            document.querySelector('#c4-screen .rematch-btn').style.display = 'none';
+            const boardUI = document.getElementById('c4-board'); boardUI.innerHTML = '';
+            for(let c=0; c<C4_COLS; c++) {
+                const colDiv = document.createElement('div'); colDiv.className = 'c4-col'; colDiv.onclick = () => makeMoveC4(c);
+                for(let r=0; r<C4_ROWS; r++) {
+                    const cell = document.createElement('div'); cell.className = 'c4-cell'; cell.id = `c4-${r}-${c}`;
+                    colDiv.appendChild(cell);
+                } boardUI.appendChild(colDiv);
+            } updateStatus('c4');
+        }
+
+        function makeMoveC4(col) {
+            if(!myTurn || !gameActive) return;
+            let rowToPlace = -1;
+            for(let r = C4_ROWS - 1; r >= 0; r--) if(c4Board[r][col] === '') { rowToPlace = r; break; }
+            if(rowToPlace === -1) return;
+
+            sfx.pop();
+            c4Board[rowToPlace][col] = mySymbol;
+            document.getElementById(`c4-${rowToPlace}-${col}`).classList.add(mySymbol.toLowerCase());
+            connection.send({ type: 'move', game: 'c4', col: col, symbol: mySymbol });
+            
+            if(!checkWinC4(rowToPlace, col, mySymbol)) {
+                if(c4Board[0].includes('')) { myTurn = false; updateStatus('c4'); }
+                else { gameActive = false; document.getElementById('c4-status').innerHTML = `DRAW! 🤝`; document.querySelector('#c4-screen .rematch-btn').style.display = 'block'; }
+            }
+        }
+
+        function receiveMoveC4(col, symbol) {
+            let rowToPlace = -1;
+            for(let r = C4_ROWS - 1; r >= 0; r--) if(c4Board[r][col] === '') { rowToPlace = r; break; }
+            c4Board[rowToPlace][col] = symbol;
+            document.getElementById(`c4-${rowToPlace}-${col}`).classList.add(symbol.toLowerCase());
+
+            if(!checkWinC4(rowToPlace, col, symbol)) {
+                if(c4Board[0].includes('')) { myTurn = true; updateStatus('c4'); }
+                else { gameActive = false; document.getElementById('c4-status').innerHTML = `DRAW! 🤝`; document.querySelector('#c4-screen .rematch-btn').style.display = 'block'; }
+            }
+        }
+
+        function checkWinC4(r, c, symbol) {
+            const dirs = [[[0,1],[0,-1]], [[1,0],[-1,0]], [[1,1],[-1,-1]], [[1,-1],[-1,1]]];
+            for(let dir of dirs) {
+                let count = 1;
+                for(let vec of dir) {
+                    let nr = r + vec[0], nc = c + vec[1];
+                    while(nr>=0 && nr<C4_ROWS && nc>=0 && nc<C4_COLS && c4Board[nr][nc]===symbol) { count++; nr+=vec[0]; nc+=vec[1]; }
+                }
+                if(count >= 4) { gameActive = false; declareWinner('c4', symbol); return true; }
+            } return false;
+        }
+
+        /* =========================================
+           GAME 3: NEON GRID RUSH
+           ========================================= */
+        const RUSH_WIN_LIMIT = 10;
+        let scoreX = 0, scoreO = 0, currentRushTarget = -1;
+        let rushTimer = null; 
+
+        function resetRush() {
+            clearTimeout(rushTimer);
+            scoreX = 0; scoreO = 0; currentRushTarget = -1; gameActive = true;
+            document.querySelector('#rush-screen .rematch-btn').style.display = 'none';
+            document.getElementById('rush-status-text').innerText = "Get Ready!";
+            
+            const board = document.getElementById('rush-board'); board.innerHTML = '';
+            for(let i=0; i<16; i++) {
+                const cell = document.createElement('div'); cell.className = 'rush-cell';
+                cell.onclick = () => tapRush(i); 
+                board.appendChild(cell);
+            }
+            updateRushScoresUI();
+            if(mySymbol === 'X') rushTimer = setTimeout(spawnRushTarget, 1500); 
+        }
+
+        function spawnRushTarget() {
+            if(!gameActive) return;
+            currentRushTarget = Math.floor(Math.random() * 16);
+            renderRushTarget(currentRushTarget);
+            connection.send({ type: 'rush_spawn', index: currentRushTarget });
+            document.getElementById('rush-status-text').innerText = "SMASH IT!";
+        }
+
+        function tapRush(index) {
+            if(!gameActive || index !== currentRushTarget) return;
+            sfx.zap();
+            currentRushTarget = -1; renderRushTarget(-1);
+            if(mySymbol === 'X') awardRushPoint('X'); 
+            else connection.send({ type: 'rush_tap', index: index }); 
+        }
+
+        function receiveRushTap(index) {
+            if(mySymbol === 'X' && gameActive && index === currentRushTarget) {
+                sfx.zap(); currentRushTarget = -1; renderRushTarget(-1); awardRushPoint('O'); 
+            }
+        }
+
+        function awardRushPoint(winnerSymbol) {
+            clearTimeout(rushTimer);
+            if(winnerSymbol === 'X') scoreX++; else scoreO++;
+            updateRushScoresUI();
+            connection.send({ type: 'rush_sync', scoreX: scoreX, scoreO: scoreO });
+            
+            if(scoreX >= RUSH_WIN_LIMIT || scoreO >= RUSH_WIN_LIMIT) endRush();
+            else rushTimer = setTimeout(spawnRushTarget, 200 + Math.random() * 600);
+        }
+
+        function receiveRushSync(sX, sO) { 
+            scoreX = sX; scoreO = sO; updateRushScoresUI(); 
+            if(scoreX >= RUSH_WIN_LIMIT || scoreO >= RUSH_WIN_LIMIT) endRush(); 
+        }
+        
+        function receiveRushSpawn(index) { 
+            document.getElementById('rush-status-text').innerText = "SMASH IT!"; 
+            renderRushTarget(index); 
+        }
+        
+        function renderRushTarget(index) {
+            currentRushTarget = index;
+            document.querySelectorAll('.rush-cell').forEach((c, i) => { i === index ? c.classList.add('active') : c.classList.remove('active'); });
+        }
+
+        function updateRushScoresUI() {
+            let hName = mySymbol === 'X' ? myName : theirName;
+            let gName = mySymbol === 'O' ? myName : theirName;
+            document.getElementById('rush-host-score').innerText = `${hName.substring(0,6)}: ${scoreX}`;
+            document.getElementById('rush-guest-score').innerText = `${gName.substring(0,6)}: ${scoreO}`;
+        }
+
+        function endRush() {
+            clearTimeout(rushTimer);
+            gameActive = false;
+            let winnerSymbol = scoreX >= RUSH_WIN_LIMIT ? 'X' : 'O';
+            if(winnerSymbol === mySymbol) { sfx.win(); document.getElementById('rush-status-text').innerHTML = `<span style="color:var(--neon-gold);">YOU WIN! 🏆</span>`; shootConfetti(); } 
+            else { sfx.lose(); document.getElementById('rush-status-text').innerHTML = `<span style="color:gray;">YOU LOSE! 💀</span>`; }
+            document.querySelector('#rush-screen .rematch-btn').style.display = 'block';
+        }
+
+        /* =========================================
+           UTILITIES
+           ========================================= */
+        function updateStatus(gameId) {
+            if(!gameActive || !gameId) return;
+            const box = document.getElementById(`${gameId}-status`);
+            box.innerHTML = myTurn 
+                ? `Your Turn, ${myName} (<span class="${mySymbol === 'X' ? 'my-turn' : 'their-turn'}">${mySymbol}</span>)` 
+                : `${theirName}'s Turn...`;
+        }
+
+        function declareWinner(gameId, winningSymbol) {
+            const box = document.getElementById(`${gameId}-status`);
+            if(winningSymbol === mySymbol) {
+                sfx.win(); box.innerHTML = `<span class="my-turn">YOU WIN! 🏆</span>`; shootConfetti();
+            } else {
+                sfx.lose(); box.innerHTML = `<span class="their-turn">YOU LOSE! 💀</span>`;
+            }
+            document.querySelector(`#${gameId}-screen .rematch-btn`).style.display = 'block';
+        }
+
+        function shootConfetti() {
+            const colors = ['#66fcf1', '#ff007f', '#f2a900', '#FFFFFF'];
+            for(let i = 0; i < 50; i++) {
+                const p = document.createElement('div'); p.classList.add('particle');
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                p.style.top = '50%'; p.style.left = '50%';
+                p.style.setProperty('--tx', (Math.random() - 0.5) * 600 + 'px');
+                p.style.setProperty('--ty', (Math.random() - 0.5) * 600 + 'px');
+                p.style.animation = `explode 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards`;
+                document.body.appendChild(p); setTimeout(() => p.remove(), 1500);
+            }
+        }
+    </script>
+</body>
+</html>
